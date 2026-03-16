@@ -1,0 +1,124 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Tenant {
+  id        String   @id @default(cuid())
+  tenantId  String   @unique
+  slug      String   @unique
+  name      String
+  plan      String   @default("free")
+  createdAt DateTime @default(now())
+
+  projects   Project[]
+  apiKeys    ApiKey[]
+  events     Event[]
+  workflows  Workflow[]
+  processing EventProcessing[]
+
+  @@index([tenantId, createdAt])
+  @@map("tenants")
+}
+
+model Project {
+  id        String   @id @default(cuid())
+  tenantId  String
+  name      String
+  createdAt DateTime @default(now())
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [tenantId], onDelete: Cascade)
+  apiKeys ApiKey[]
+
+  @@index([tenantId, createdAt])
+  @@map("projects")
+}
+
+model ApiKey {
+  id        String   @id @default(cuid())
+  tenantId  String
+  projectId String
+  keyHash   String   @unique
+  prefix    String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [tenantId], onDelete: Cascade)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, createdAt])
+  @@map("api_keys")
+}
+
+model Event {
+  id        String   @id @default(cuid())
+  tenantId  String
+  eventName String
+  source    String   @default("api")
+  payload   Json
+  createdAt DateTime @default(now())
+
+  tenant      Tenant             @relation(fields: [tenantId], references: [tenantId], onDelete: Cascade)
+  processing  EventProcessing[]
+  executions  WorkflowExecution[]
+
+  @@index([tenantId, createdAt])
+  @@index([tenantId, eventName])
+  @@map("events")
+}
+
+model EventProcessing {
+  id          String   @id @default(cuid())
+  tenantId    String
+  eventId     String
+  workerType  String
+  processedAt DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [tenantId], onDelete: Cascade)
+  event  Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, workerType])
+  @@index([tenantId, processedAt])
+  @@map("event_processing")
+}
+
+model Workflow {
+  id           String   @id @default(cuid())
+  tenantId     String
+  name         String
+  triggerEvent String
+  conditions   Json
+  actions      Json
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  tenant     Tenant              @relation(fields: [tenantId], references: [tenantId], onDelete: Cascade)
+  executions WorkflowExecution[]
+
+  @@index([tenantId, createdAt])
+  @@index([tenantId, triggerEvent])
+  @@map("workflows")
+}
+
+model WorkflowExecution {
+  id         String   @id @default(cuid())
+  tenantId   String
+  workflowId String
+  eventId    String
+  status     String
+  error      String?
+  executedAt DateTime @default(now())
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [tenantId], onDelete: Cascade)
+  workflow Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  event    Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, executedAt])
+  @@index([tenantId, workflowId])
+  @@map("workflow_executions")
+}
