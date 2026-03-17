@@ -1,77 +1,80 @@
-# Devent Platform (experimental app for testing event-driven architecture patterns, monorepo structure, and local development workflows)
+# Devent Platform 
 
-Devent es una plataforma multitenant y event-driven para ingestar, procesar y distribuir eventos de aplicaciones.
 
-## Estado actual
+> Experimental app for testing event-driven architecture patterns, monorepo structure, and local development workflows
 
-- Fase 1: foundation de paquetes compartidos lista.
-- Fase 2: API de ingestión (`POST /v1/events`) lista.
-- Fase 3: worker base con idempotencia y fan-out listo.
-- Fase 5 (infra local): bootstrap Docker + variables de entorno disponible.
+Devent is a multitenant, event-driven platform to ingest, process, and distribute application events.
 
-## Requisitos
+## Current status
+
+- Phase 1: shared packages foundation completed.
+- Phase 2: ingestion API (`POST /v1/events`) completed.
+- Phase 3: base worker with idempotency and fan-out completed.
+- Phase 5 (local infra): Docker bootstrap + environment variables available.
+
+## Requirements
 
 - Node.js >= 18
 - npm >= 10
 - Docker + Docker Compose
 
-## Variables de entorno
+## Environment variables
 
-Se incluyen ejemplos en:
+Example files are included in:
 
 - `.env.example`
 - `apps/api/.env.example`
 - `apps/worker/.env.example`
 - `apps/dashboard/.env.example`
 
-Variables relevantes de webhooks en worker:
+Relevant webhook variables in worker:
 
-- `WEBHOOK_TIMEOUT_MS`: timeout HTTP por intento de envío.
-- `WEBHOOK_SIGNING_SECRET`: secreto opcional para firma `X-Devent-Signature`.
+- `WEBHOOK_TIMEOUT_MS`: HTTP timeout per delivery attempt.
+- `WEBHOOK_SIGNING_SECRET`: optional secret for `X-Devent-Signature` signing.
 
-Variable relevante para dashboard server-side:
+Relevant variable for server-side dashboard:
 
-- `DEVENT_DASHBOARD_API_KEY`: API key usada por la ruta `/events` del dashboard para consultar la API.
-- `DEVENT_API_URL_SERVER`: URL interna que usa el dashboard en server-side (en Docker usar `http://api:3001/v1`).
+- `DEVENT_DASHBOARD_API_KEY`: API key used by the dashboard `/events` route to query the API.
+- `DEVENT_API_URL_SERVER`: internal URL used by the dashboard on the server side (in Docker use `http://api:3001/v1`).
 
-## Infra local (Docker)
+## Local infrastructure (Docker)
 
-El archivo de composición está en `infra/docker/docker-compose.yml`.
+The compose file is located at `infra/docker/docker-compose.yml`.
 
-Levantar todo el stack:
+Start the full stack:
 
 ```bash
 docker compose -f infra/docker/docker-compose.yml up -d
 ```
 
-Apagar el stack:
+Stop the stack:
 
 ```bash
 docker compose -f infra/docker/docker-compose.yml down
 ```
 
-Servicios expuestos:
+Exposed services:
 
 - Dashboard: `http://localhost:3000`
 - API: `http://localhost:3001`
 - PostgreSQL: `localhost:5432`
 - Redis: `localhost:6379`
 
-## Desarrollo local sin Docker
+## Local development without Docker
 
-Instalar dependencias:
+Install dependencies:
 
 ```bash
 npm install
 ```
 
-Levantar todos los workspaces en paralelo con Turbo:
+Start all workspaces in parallel with Turbo:
 
 ```bash
 npm run dev
 ```
 
-Levantar servicios individuales:
+Start individual services:
 
 ```bash
 npm run dev --workspace api
@@ -79,9 +82,9 @@ npm run dev --workspace worker
 npm run dev --workspace dashboard
 ```
 
-## Checks de calidad
+## Quality checks
 
-Chequeo de tipos:
+Type checking:
 
 ```bash
 npm run check-types
@@ -93,18 +96,18 @@ Build:
 npm run build
 ```
 
-## Smoke test del flujo de eventos
+## Event flow smoke test
 
-1. Asegura que API y worker estén activos.
-2. Ejecuta migración y seed local:
+1. Make sure API and worker are running.
+2. Run local migration and seed:
 
 ```bash
 npm run prisma:migrate --workspace @devent/database -- --name init
 npm run prisma:seed --workspace @devent/database
 ```
 
-3. Usa el `apiKey` que imprime el seed.
-4. Envía un evento:
+3. Use the `apiKey` printed by the seed.
+4. Send an event:
 
 ```bash
 curl -X POST http://localhost:3001/v1/events \
@@ -113,14 +116,14 @@ curl -X POST http://localhost:3001/v1/events \
 	-d '{"event":"user_registered","data":{"plan":"pro"}}'
 ```
 
-5. Verifica respuesta `202` con `eventId`.
-6. Revisa logs de API/worker para checkpoints:
+5. Verify a `202` response with `eventId`.
+6. Check API/worker logs for checkpoints:
 	 - `event.received`
 	 - `event.stored`
 	 - `event.queued`
 	 - `worker.job_started`
 
-## Documentación de funcionalidades
+## Feature documentation
 
-Cada funcionalidad trabajada debe documentarse en `docs/features/`.
-Usa `docs/features/TEMPLATE.md` como base.
+Each implemented feature must be documented in `docs/features/`.
+Use `docs/features/TEMPLATE.md` as the base.
