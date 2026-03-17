@@ -1,4 +1,4 @@
-# Devent Platform
+# Devent Platform (experimental app for testing event-driven architecture patterns, monorepo structure, and local development workflows)
 
 Devent es una plataforma multitenant y event-driven para ingestar, procesar y distribuir eventos de aplicaciones.
 
