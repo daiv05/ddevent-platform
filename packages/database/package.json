@@ -9,13 +9,19 @@
     "check-types": "tsc -p tsconfig.json --noEmit",
     "lint": "echo \"No lint configured for @devent/database\"",
     "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate dev"
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:seed": "tsx prisma/seed.ts"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
     "@devent/utils": "*",
     "@prisma/client": "^6.15.0"
   },
   "devDependencies": {
-    "prisma": "^6.15.0"
+    "bcryptjs": "^2.4.3",
+    "prisma": "^6.15.0",
+    "tsx": "^4.20.6"
   }
 }

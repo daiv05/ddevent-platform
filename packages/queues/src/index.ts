@@ -8,3 +8,4 @@ export const analyticsQueue = new Queue('analytics', { connection: bullmqConnect
 export const cleanupQueue = new Queue('cleanup', { connection: bullmqConnection });
 
 export { redis };
+export { bullmqConnection };

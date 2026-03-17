@@ -1,36 +1,126 @@
-**Devent Platform**
+# Devent Platform
 
-**Devent** es una plataforma SaaS que permite a las empresas gestionar eventos de forma eficiente y escalable.
+Devent es una plataforma multitenant y event-driven para ingestar, procesar y distribuir eventos de aplicaciones.
 
-## Características
+## Estado actual
 
-* **Event store**: Almacenamiento de eventos en tiempo real.
-* **Workflow engine**: Motor de flujos de trabajo para automatizar procesos.
-* **Webhook dispatching**: Envío de webhooks a servicios externos.
-* **Analytics**: Analíticas en tiempo real para monitorizar eventos.
-* **Scalability**: Arquitectura escalable para manejar grandes volúmenes de eventos.
+- Fase 1: foundation de paquetes compartidos lista.
+- Fase 2: API de ingestión (`POST /v1/events`) lista.
+- Fase 3: worker base con idempotencia y fan-out listo.
+- Fase 5 (infra local): bootstrap Docker + variables de entorno disponible.
 
-## Arquitectura
+## Requisitos
 
-La arquitectura se basa en un modelo de eventos, donde los eventos son el núcleo del sistema. Los eventos son capturados, procesados y almacenados en una base de datos optimizada para este propósito. Los flujos de trabajo se ejecutan en segundo plano, procesando los eventos y realizando acciones según las reglas definidas.
+- Node.js >= 18
+- npm >= 10
+- Docker + Docker Compose
 
-## Tecnologías
+## Variables de entorno
 
-* **Next.js**: Framework para la interfaz de usuario.
-* **PostgreSQL**: Base de datos para el almacenamiento de eventos.
-* **Redis**: Cache para el almacenamiento de datos temporales.
-* **TypeScript**: Lenguaje de programación.
+Se incluyen ejemplos en:
 
-## Getting Started
+- `.env.example`
+- `apps/api/.env.example`
+- `apps/worker/.env.example`
+- `apps/dashboard/.env.example`
 
-First, run the development server:
+Variables relevantes de webhooks en worker:
+
+- `WEBHOOK_TIMEOUT_MS`: timeout HTTP por intento de envío.
+- `WEBHOOK_SIGNING_SECRET`: secreto opcional para firma `X-Devent-Signature`.
+
+Variable relevante para dashboard server-side:
+
+- `DEVENT_DASHBOARD_API_KEY`: API key usada por la ruta `/events` del dashboard para consultar la API.
+- `DEVENT_API_URL_SERVER`: URL interna que usa el dashboard en server-side (en Docker usar `http://api:3001/v1`).
+
+## Infra local (Docker)
+
+El archivo de composición está en `infra/docker/docker-compose.yml`.
+
+Levantar todo el stack:
+
+```bash
+docker compose -f infra/docker/docker-compose.yml up -d
+```
+
+Apagar el stack:
+
+```bash
+docker compose -f infra/docker/docker-compose.yml down
+```
+
+Servicios expuestos:
+
+- Dashboard: `http://localhost:3000`
+- API: `http://localhost:3001`
+- PostgreSQL: `localhost:5432`
+- Redis: `localhost:6379`
+
+## Desarrollo local sin Docker
+
+Instalar dependencias:
+
+```bash
+npm install
+```
+
+Levantar todos los workspaces en paralelo con Turbo:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
+
+Levantar servicios individuales:
+
+```bash
+npm run dev --workspace api
+npm run dev --workspace worker
+npm run dev --workspace dashboard
+```
+
+## Checks de calidad
+
+Chequeo de tipos:
+
+```bash
+npm run check-types
+```
+
+Build:
+
+```bash
+npm run build
+```
+
+## Smoke test del flujo de eventos
+
+1. Asegura que API y worker estén activos.
+2. Ejecuta migración y seed local:
+
+```bash
+npm run prisma:migrate --workspace @devent/database -- --name init
+npm run prisma:seed --workspace @devent/database
+```
+
+3. Usa el `apiKey` que imprime el seed.
+4. Envía un evento:
+
+```bash
+curl -X POST http://localhost:3001/v1/events \
+	-H "Content-Type: application/json" \
+	-H "Authorization: Bearer <apiKey_from_seed>" \
+	-d '{"event":"user_registered","data":{"plan":"pro"}}'
+```
+
+5. Verifica respuesta `202` con `eventId`.
+6. Revisa logs de API/worker para checkpoints:
+	 - `event.received`
+	 - `event.stored`
+	 - `event.queued`
+	 - `worker.job_started`
+
+## Documentación de funcionalidades
+
+Cada funcionalidad trabajada debe documentarse en `docs/features/`.
+Usa `docs/features/TEMPLATE.md` como base.

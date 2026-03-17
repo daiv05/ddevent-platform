@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@devent/database": ["../../packages/database/src"],
+      "@devent/events": ["../../packages/events/src"],
+      "@devent/queues": ["../../packages/queues/src"],
+      "@devent/utils": ["../../packages/utils/src"],
+      "@devent/workflows": ["../../packages/workflows/src"]
+    },
+    "outDir": "dist"
+  },
+  "include": ["src/**/*.ts"]
+}

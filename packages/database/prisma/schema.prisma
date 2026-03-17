@@ -1,5 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "windows", "linux-musl-openssl-3.0.x"]
 }
 
 datasource db {
@@ -20,6 +21,7 @@ model Tenant {
   events     Event[]
   workflows  Workflow[]
   processing EventProcessing[]
+  executions WorkflowExecution[]
 
   @@index([tenantId, createdAt])
   @@map("tenants")

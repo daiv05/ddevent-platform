@@ -1,0 +1,110 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: devent-postgres
+    environment:
+      POSTGRES_DB: devent
+      POSTGRES_USER: devent
+      POSTGRES_PASSWORD: devent
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U devent -d devent']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    container_name: devent-redis
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  deps:
+    image: node:20-alpine
+    container_name: devent-deps
+    working_dir: /workspace
+    command: >
+      sh -c "npm install && npm run prisma:generate --workspace @devent/database"
+    volumes:
+      - ../../:/workspace
+
+  api:
+    image: node:20-alpine
+    container_name: devent-api
+    working_dir: /workspace
+    command: >
+      sh -c "npm run dev --workspace api"
+    environment:
+      PORT: 3001
+      SERVICE_NAME: api
+      LOG_LEVEL: info
+      DATABASE_URL: postgresql://devent:devent@postgres:5432/devent?schema=public
+      REDIS_URL: redis://redis:6379
+    ports:
+      - '3001:3001'
+    volumes:
+      - ../../:/workspace
+    depends_on:
+      deps:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    image: node:20-alpine
+    container_name: devent-worker
+    working_dir: /workspace
+    command: >
+      sh -c "npm run dev --workspace worker"
+    environment:
+      SERVICE_NAME: worker
+      LOG_LEVEL: info
+      WEBHOOK_TIMEOUT_MS: 8000
+      WEBHOOK_SIGNING_SECRET: change-me-local-secret
+      DATABASE_URL: postgresql://devent:devent@postgres:5432/devent?schema=public
+      REDIS_URL: redis://redis:6379
+    volumes:
+      - ../../:/workspace
+    depends_on:
+      deps:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  dashboard:
+    image: node:20-alpine
+    container_name: devent-dashboard
+    working_dir: /workspace
+    command: >
+      sh -c "npm run dev --workspace dashboard"
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:3001/v1
+      DEVENT_API_URL_SERVER: http://api:3001/v1
+      DEVENT_DASHBOARD_API_KEY: ${DEVENT_DASHBOARD_API_KEY:-}
+    ports:
+      - '3000:3000'
+    volumes:
+      - ../../:/workspace
+    depends_on:
+      deps:
+        condition: service_completed_successfully
+      api:
+        condition: service_started
+
+volumes:
+  postgres_data:
+  redis_data:
